@@ -48,9 +48,17 @@ function create_search_feed()
 {
   require_once(ABSPATH . 'wp-admin/includes/export.php');
 
-  add_filter('the_content_export', '__return_empty_string');
   add_filter('the_excerpt_export', '__return_empty_string');
+  add_filter('the_content_export', '__return_empty_string');
 
+ 
+
+
+  
+  
+  
+  
+  
   ob_start();
 
   $wpExportOptions = array(
@@ -64,6 +72,10 @@ function create_search_feed()
 
   remove_filter('the_content_export', '__return_empty_string');
   remove_filter('the_excerpt_export', '__return_empty_string');
+  
+  
+  
+  
 
   $upload_dir = wp_get_upload_dir();
   $save_path = $upload_dir['basedir'] . '/wp-sls/search-feed.xml';
@@ -99,6 +111,7 @@ foreach ($xml->getDocNamespaces() as $namespace) {
 
   
 
+
   foreach ($xml->channel->item as $item) {
     $wp = $item->children('wp', true);
     $dc = $item->children('dc', true);
@@ -123,8 +136,30 @@ foreach ($xml->getDocNamespaces() as $namespace) {
     unset($item->guid);
     unset($item->category);
 
+    // Remove the description and excerpt:encoded elements
+    unset($item->description);
+	
+	$excerpt_encoded = $item->children('http://wordpress.org/export/1.2/excerpt/')->encoded;
+      //$item->description = str_replace($excerpt_encoded, '', $item->description);
+      unset($item->children('http://wordpress.org/export/1.2/excerpt/')->encoded);
+  
 
   }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+  
+  
+  
+  
 
   $new_xml = $xml->asXML();
   
