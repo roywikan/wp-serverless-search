@@ -42,14 +42,14 @@ function create_wp_sls_dir()
   }
 }
 
-/**
- * Create Search Feed
- */
 add_action('publish_post', 'create_search_feed');
+
 function create_search_feed()
 {
-
   require_once(ABSPATH . 'wp-admin/includes/export.php');
+
+  add_filter('the_content_export', '__return_empty_string');
+  add_filter('the_excerpt_export', '__return_empty_string');
 
   ob_start();
 
@@ -62,10 +62,84 @@ function create_search_feed()
 
   $xml = ob_get_clean();
 
+  remove_filter('the_content_export', '__return_empty_string');
+  remove_filter('the_excerpt_export', '__return_empty_string');
+
   $upload_dir = wp_get_upload_dir();
   $save_path = $upload_dir['basedir'] . '/wp-sls/search-feed.xml';
 
   file_put_contents($save_path, $xml);
+  
+  
+  
+
+
+
+  $xml = simplexml_load_file($save_path);
+  
+  // Remove the <wp:author> and <generator> elements
+  unset($xml->channel->generator);
+
+  // Remove all elements with the "content" namespace
+  foreach ($xml->getDocNamespaces() as $namespace) {
+      $xml->registerXPathNamespace('content', $namespace);
+      foreach ($xml->xpath('//content:*') as $contentElement) {
+          unset($contentElement[0]);
+      }
+  }
+
+// Remove all elements with the "wp:" namespace
+foreach ($xml->getDocNamespaces() as $namespace) {
+    $xml->registerXPathNamespace('wp', $namespace);
+    $elements = $xml->xpath('//wp:*');
+    for ($i = count($elements) - 1; $i >= 0; $i--) {
+        unset($elements[$i][0]);
+    }
+}
+
+  
+
+  foreach ($xml->channel->item as $item) {
+    $wp = $item->children('wp', true);
+    $dc = $item->children('dc', true);
+
+    unset($wp->post_parent);
+    unset($wp->menu_order);
+    unset($wp->post_type);
+    unset($wp->post_password);
+    unset($wp->post_date_gmt);
+    unset($wp->post_modified);
+    unset($wp->post_modified_gmt);
+    unset($wp->comment_status);
+    unset($wp->ping_status);
+    unset($wp->status);
+    unset($wp->is_sticky);
+    unset($wp->post_date);
+    unset($wp->post_name);
+    unset($wp->postmeta);
+    unset($wp->meta_key);
+    unset($dc->creator);
+
+    unset($item->guid);
+    unset($item->category);
+
+
+  }
+
+  $new_xml = $xml->asXML();
+  
+  
+
+  $new_xml = preg_replace('/<!--.*?-->/s', '', $new_xml);
+
+  // Convert the XML object to string and remove whitespace and tabs
+  $new_xml = preg_replace('/^\s+|\n\n|\r\r|\s+$/m', '', $new_xml);
+
+
+
+  
+  
+  file_put_contents($save_path, $new_xml);
 }
 
 /**
